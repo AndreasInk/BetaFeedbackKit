@@ -30,12 +30,7 @@ struct BetaFeedbackDemoApp: App {
             ]
         },
         feedbackClarificationMode: .onDevice,
-        feedbackNotificationMode: .onScreenshot,
-        onFeedbackPrepared: { report in
-            #if DEBUG
-            print("[BetaFeedbackDemo] Prepared report:\n\(report.formattedText)")
-            #endif
-        }
+        feedbackNotificationMode: .onScreenshot
     )
 
     var body: some Scene {
@@ -62,6 +57,14 @@ private struct DemoSettingsView: View {
                     Toggle("Progress sounds", isOn: .constant(false))
                     Toggle("Weekly summary", isOn: .constant(true))
                     Toggle("Show goal details", isOn: .constant(true))
+                }
+
+                if let report = feedback.latestFeedbackReport {
+                    Section("Prepared feedback") {
+                        Text(report.formattedText)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                    }
                 }
 
                 Section("BetaFeedbackKit") {

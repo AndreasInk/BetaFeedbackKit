@@ -135,12 +135,15 @@ On older systems or without notification access, BetaFeedbackKit falls back to n
 
 ## Privacy
 
-- Analysis stays on-device with no backend, API key, account, or external model provider. Active conversations remain in the host app's `UserDefaults` for up to 24 hours; an optional app-rendered screenshot stays in memory only.
-- Notification `userInfo` contains routing IDs only, while visible questions may reflect supplied feedback or the optional in-memory screenshot. Analytics contain flow metadata, never tester responses; do not supply personal data, tokens, or private URLs as context.
+- Analysis stays on-device with no backend, API key, account, or external model provider. Active conversations remain in the host app's `UserDefaults` for up to 24 hours; the captured app-window image stays in memory only and is never added to the stored report.
+- Notification `userInfo` contains routing IDs only, while visible questions may reflect supplied feedback or the in-memory screenshot. Analytics contain flow metadata, never tester responses; do not supply personal data, tokens, or private URLs as context.
 
 ## Advanced options
 
-- `feedbackScreenshotProvider` adds an in-memory app image for on-device analysis.
+- On iOS/macOS 27, the mounted `.beta(viewModel:)` view captures its own app window once, before feedback UI or notification permission prompts appear. Every clarification request includes that image. No Photos or desktop recording permission is requested.
+- `feedbackScreenshotProvider` overrides automatic capture, for example to supply a redacted app-rendered image. Its result is authoritative: returning `nil` does not fall back to another image.
+- A missing, ambiguous, or expired image skips model analysis and preserves the response. Images are memory-only; after app relaunch, a notification reply completes without model analysis. A later screen is never substituted. Completion, cancellation, replacement, and expiry release the retained image.
+- iOS/macOS 26 retain text-only sheet clarification; earlier supported systems prepare the original response without model analysis.
 - `.betaState(domain:state:metadata:)` adds app state. `feedbackDiagnosticsMode: .onDevice` adds privacy-filtered MetricKit evidence when available.
 - `onFeedbackPrepared` and `latestFeedbackReport` expose the finished report.
 - `beta-feedback` and `beta-screenshot-tip` are supported deep-link hosts through `handleDeepLink(_:)`.
@@ -148,9 +151,9 @@ On older systems or without notification access, BetaFeedbackKit falls back to n
 
 ## Development
 
-Clarification asks for the single most useful missing detail for locating, reproducing, or understanding an issue. Sufficiently specific feedback can finish without another question; original answers remain unchanged.
+The candidate clarification prompt targets the single most useful missing detail for locating, reproducing, or understanding an issue. The minimal instruction baseline remains the default until blinded review and real replies establish a benefit. Both use the same image pipeline and output schema; original answers remain unchanged.
 
-Run `swift test` for deterministic coverage. Xcode 27 also runs the Apple Evaluations test, which scores clarification quality across text, conversation-history, and bundled screenshot fixtures using the on-device model.
+Run `swift build` and `swift test` for deterministic coverage. Model quality runs are explicitly opt-in and require an available on-device model on iOS/macOS 27. They compare matched screenshot cases, save private local artifacts, calibrate the image judge, and keep human acceptance separate. See the evaluation runner and its review guide in `Evaluations`. Never commit tester replies or generated private evaluation artifacts.
 
 ## License
 

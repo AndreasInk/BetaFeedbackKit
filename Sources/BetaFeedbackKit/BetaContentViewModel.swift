@@ -99,7 +99,14 @@ public final class BetaContentViewModel {
         var id: String { rawValue }
     }
 
-    var presentedSheet: PresentedSheet?
+    var presentedSheet: PresentedSheet? {
+        didSet {
+            if presentedSheet != .testFlightFeedbackPrompt {
+                activeSheetScreenshot = nil
+                activeSheetCaptureID = nil
+            }
+        }
+    }
     var showTestFlightFeedbackPrompt: Bool {
         get { presentedSheet == .testFlightFeedbackPrompt }
         set {
@@ -155,8 +162,16 @@ public final class BetaContentViewModel {
     @ObservationIgnored private var betaStateRegistrations: [String: [BetaFeedbackStateRegistration]] = [:]
     @ObservationIgnored private var screenshotObserverToken: BetaNotificationObserverToken?
     @ObservationIgnored private var screenshotLaunchGate = BetaScreenshotLaunchGate()
+    @ObservationIgnored let feedbackWindowCapture = FeedbackWindowCapture()
+    @ObservationIgnored var activeSheetCaptureID: UUID?
+    @ObservationIgnored var activeSheetScreenshot: CGImage?
     #if os(iOS)
-    @ObservationIgnored var activeConversationScreenshot: (id: UUID, image: CGImage)?
+    @ObservationIgnored var pendingScreenshotCapture = FeedbackScreenshotCaptureBuffer()
+    @ObservationIgnored var notificationStartGeneration = UUID()
+    @ObservationIgnored var conversationScreenshotExpiryTask: Task<Void, Never>?
+    @ObservationIgnored var activeConversationScreenshot: (id: UUID, image: CGImage)? {
+        didSet { if activeConversationScreenshot == nil { conversationScreenshotExpiryTask?.cancel() } }
+    }
     #endif
 
     var hasSeenTestFlightScreenshotTip: Bool {
@@ -223,9 +238,32 @@ public final class BetaContentViewModel {
         }
     }
 
+    func captureFeedbackScreenshot() -> CGImage? {
+        guard feedbackClarificationMode == .onDevice,
+              #available(iOS 27.0, macOS 27.0, *) else { return nil }
+        // An explicit provider returning nil means capture is unavailable.
+        if let feedbackScreenshotProvider { return feedbackScreenshotProvider() }
+        guard !showScreenshotOverlay, presentedSheet == nil else { return nil }
+        return feedbackWindowCapture.capture()
+    }
+
     func presentTestFlightFeedbackPrompt() {
+        guard presentedSheet != .testFlightFeedbackPrompt else { return }
+        presentTestFlightFeedbackPrompt(capturedScreenshot: captureFeedbackScreenshot())
+    }
+
+    func presentTestFlightFeedbackPrompt(capturedScreenshot: CGImage?) {
+        guard presentedSheet != .testFlightFeedbackPrompt else { return }
+        activeSheetCaptureID = UUID()
+        activeSheetScreenshot = capturedScreenshot
         showScreenshotOverlay = false
         presentedSheet = .testFlightFeedbackPrompt
+    }
+
+    func releaseSheetScreenshot(ifCurrent captureID: UUID?) {
+        guard activeSheetCaptureID == captureID else { return }
+        activeSheetScreenshot = nil
+        activeSheetCaptureID = nil
     }
 
     func presentTestFlightScreenshotTip() {
@@ -248,6 +286,8 @@ public final class BetaContentViewModel {
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     let screenshotGeneration = self.screenshotLaunchGate.recordScreenshot()
+                    self.notificationStartGeneration = UUID()
+                    self.pendingScreenshotCapture.record(self.captureFeedbackScreenshot(), generation: screenshotGeneration)
                     betaFeedbackScreenshotLogger.info(
                         "Screenshot captured; preparing foreground guidance and delayed notification"
                     )
@@ -268,6 +308,7 @@ public final class BetaContentViewModel {
                             notificationConversationExpected: false,
                             for: screenshotGeneration
                         )
+                        self.pendingScreenshotCapture.discard(for: screenshotGeneration)
                         self.screenshotLaunchGate.discardScreenshot(
                             for: screenshotGeneration
                         )
@@ -434,10 +475,11 @@ public final class BetaContentViewModel {
             "Starting screenshot notification flow with a \(BetaFeedbackNotificationTiming.initialDelay, privacy: .public)-second delivery delay"
         )
 
+        let capturedImage = pendingScreenshotCapture.take(for: screenshotGeneration)
         let notificationConversationStarted: Bool
         if feedbackNotificationMode == .onScreenshot {
             if #available(iOS 27.0, *) {
-                notificationConversationStarted = await startFeedbackNotificationConversation()
+                notificationConversationStarted = await startFeedbackNotificationConversation(capturedScreenshot: capturedImage, startGeneration: notificationStartGeneration)
             } else {
                 Self.scheduleTestFlightScreenshotTipNotificationInternal()
                 notificationConversationStarted = false
@@ -549,10 +591,14 @@ public final class BetaContentViewModel {
 
     @MainActor
     func analyzeFeedback(
-        _ input: FeedbackAnalysisInput
+        _ input: FeedbackAnalysisInput, screenshotSessionID: UUID? = nil
     ) async throws -> BetaFeedbackClarificationAnalysis? {
         guard feedbackClarificationMode == .onDevice else { return nil }
-        return try await feedbackAnalyzer.analyze(input)
+        if let screenshotSessionID, activeSheetCaptureID != screenshotSessionID { throw CancellationError() }
+        if #available(iOS 27.0, macOS 27.0, *), activeSheetScreenshot == nil { return nil }
+        let result = try await feedbackAnalyzer.analyze(input, screenshot: activeSheetScreenshot)
+        if let screenshotSessionID, activeSheetCaptureID != screenshotSessionID { throw CancellationError() }
+        return result
     }
 
     @discardableResult
@@ -566,6 +612,8 @@ public final class BetaContentViewModel {
             analysis: analysis,
             clarificationResponse: clarificationResponse
         )
+        activeSheetScreenshot = nil
+        activeSheetCaptureID = nil
         testFlightFeedbackAnswer = input.originalFeedback
         testFlightFeedbackQuestionId = input.questionID
         latestFeedbackReport = report

@@ -18,10 +18,10 @@ public enum BetaFeedbackNotificationMode: Sendable, Equatable {
     case onScreenshot
 }
 
-/// Supplies an optional in-memory image for iOS 27 multimodal analysis.
+/// Overrides automatic app-window capture for iOS/macOS 27 multimodal analysis.
 ///
 /// `UIApplication.userDidTakeScreenshotNotification` does not include the screenshot.
-/// A host that wants image-aware clarification can render its own app UI and return it here.
+/// Returning nil skips model clarification. Images are captured before feedback UI appears.
 /// BetaFeedbackKit never persists this image or includes it in a notification or report.
 public typealias BetaFeedbackScreenshotProvider = @MainActor @Sendable () -> CGImage?
 
@@ -334,6 +334,18 @@ public extension BetaContentViewModel {
     @discardableResult
     func startFeedbackNotificationConversation() async -> Bool {
         guard feedbackNotificationMode == .onScreenshot,
+              Self.isDebugOrTestFlight(), #available(iOS 27.0, *) else { return false }
+        let generation = UUID()
+        notificationStartGeneration = generation
+        let screenshot = captureFeedbackScreenshot()
+        return await startFeedbackNotificationConversation(capturedScreenshot: screenshot, startGeneration: generation)
+    }
+}
+
+extension BetaContentViewModel {
+    @MainActor
+    func startFeedbackNotificationConversation(capturedScreenshot: CGImage?, startGeneration: UUID) async -> Bool {
+        guard feedbackNotificationMode == .onScreenshot,
               Self.isDebugOrTestFlight() else {
             return false
         }
@@ -346,7 +358,9 @@ public extension BetaContentViewModel {
             return false
         }
 
+        guard notificationStartGeneration == startGeneration else { return false }
         await registerFeedbackNotificationCategories()
+        guard notificationStartGeneration == startGeneration else { return false }
         let snapshotInput = makeFeedbackAnalysisInput(
             answer: "",
             questionID: "screenshot-feedback",
@@ -372,10 +386,27 @@ public extension BetaContentViewModel {
         let record = BetaFeedbackConversationRecord.new(snapshot: snapshot)
         feedbackConversationStore.save(record)
         latestFeedbackReport = nil
-        activeConversationScreenshot = feedbackScreenshotProvider?().map { (record.id, $0) }
+        activeConversationScreenshot = capturedScreenshot.map { (record.id, $0) }
+        conversationScreenshotExpiryTask?.cancel()
+        if capturedScreenshot != nil {
+            let expiryDelay = max(0, record.expiresAt.timeIntervalSinceNow)
+            conversationScreenshotExpiryTask = Task { @MainActor [weak self] in
+                do { try await Task.sleep(for: .seconds(expiryDelay)) } catch { return }
+                guard self?.activeConversationScreenshot?.id == record.id else { return }
+                self?.activeConversationScreenshot = nil
+            }
+        }
 
         do {
             try await schedule(record: record, delay: BetaFeedbackNotificationTiming.initialDelay)
+            guard notificationStartGeneration == startGeneration,
+                  isCurrentFeedbackConversation(record) else {
+                let center = UNUserNotificationCenter.current()
+                center.removePendingNotificationRequests(withIdentifiers: [record.pendingRequestID])
+                center.removeDeliveredNotifications(withIdentifiers: [record.pendingRequestID])
+                clearFeedbackConversation(ifCurrent: record)
+                return false
+            }
             betaFeedbackConversationLogger.info("Scheduled initial feedback notification")
             AnalyticsManager.logEvent("TestFlight.Feedback.ConversationStarted", info: [
                 "source": "screenshot"
@@ -386,7 +417,7 @@ public extension BetaContentViewModel {
                 betaFeedbackConversationLogger.notice(
                     "Superseded initial notification work with a newer conversation"
                 )
-                return feedbackConversationStore.load() != nil
+                return false
             }
             clearFeedbackConversation(ifCurrent: record)
             AnalyticsManager.logEvent("TestFlight.Feedback.ConversationUnavailable", info: [
@@ -530,7 +561,14 @@ public extension BetaContentViewModel {
                     )
                 } catch {
                     if isCurrentFeedbackConversation(record) {
-                        presentTestFlightFeedbackPrompt()
+                        if record.hasAtLeastOneResponse {
+                            await completeFeedbackConversation(record, outcome: "open_schedule_failed")
+                        } else {
+                            let screenshot = activeConversationScreenshot?.id == record.id
+                                ? activeConversationScreenshot?.image : nil
+                            clearFeedbackConversation(ifCurrent: record)
+                            presentTestFlightFeedbackPrompt(capturedScreenshot: screenshot)
+                        }
                     }
                 }
             }
@@ -554,7 +592,7 @@ public extension BetaContentViewModel {
 
     /// Rehydrates a completed report or resumes model processing after a relaunch.
     @MainActor
-    func resumePendingFeedbackConversation() async {
+    public func resumePendingFeedbackConversation() async {
         guard feedbackNotificationMode == .onScreenshot,
               var record = feedbackConversationStore.load() else {
             return
@@ -574,7 +612,7 @@ public extension BetaContentViewModel {
         }
         if record.status == .processing {
             // An app can be suspended after persisting a response but before model analysis.
-            // Resuming never needs the optional image; all textual/state context is durable.
+            // After relaunch the memory-only image is gone; complete with the durable answers.
             record.status = .processing
             feedbackConversationStore.save(record)
             await processFeedbackConversation(record)
@@ -597,7 +635,7 @@ public extension BetaContentViewModel {
     }
 
     @MainActor
-    func registerFeedbackNotificationCategories() async {
+    public func registerFeedbackNotificationCategories() async {
         guard feedbackNotificationMode == .onScreenshot else { return }
         let center = UNUserNotificationCenter.current()
         await withCheckedContinuation { continuation in
@@ -651,10 +689,12 @@ private extension BetaContentViewModel {
             return
         }
 
+        guard activeConversationScreenshot?.id == record.id,
+              let screenshot = activeConversationScreenshot?.image else {
+            await completeFeedbackConversation(record, outcome: "image_unavailable")
+            return
+        }
         do {
-            let screenshot = activeConversationScreenshot?.id == record.id
-                ? activeConversationScreenshot?.image
-                : nil
             let result = try await feedbackConversationAnalyzer.analyzeConversation(
                 input,
                 screenshot: screenshot
@@ -755,9 +795,9 @@ private extension BetaContentViewModel {
         testFlightFeedbackAnswer = report.originalFeedback
         testFlightFeedbackQuestionId = report.questionID
         hasShownTestFlightFeedbackPrompt = true
+        activeConversationScreenshot = nil
         onFeedbackPrepared?(report)
         let copied = copyFeedbackToPasteboard(report: report)
-        activeConversationScreenshot = nil
 
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [record.pendingRequestID])

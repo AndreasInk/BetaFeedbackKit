@@ -1,0 +1,23 @@
+# Image clarification evaluation
+
+The main comparison is frozen in `Tests/BetaFeedbackKitTests/Fixtures/image-clarification-corpus.json`: eight images, each with vague and sufficient feedback. It measures the usefulness of one optional follow-up, not completion of a mandatory report form. The labels allow alternative useful questions. Screenshots show appearance; they do not prove earlier actions or causes. Existing text-only examples are archived in `legacy-text-corpus.json` and never contribute to the image scores.
+
+The runner builds tests into a fresh per-run directory before recording its source manifest. On a Mac running macOS 27 with the local model available, run:
+
+```sh
+python3 Evaluations/run_image_evals.py --output /tmp/betakit-image-comparison-unique-run
+```
+
+The default run is 40 serial jobs: eight calibration controls and 16 cases for each of baseline/candidate. Each job gets a fresh process group and 60 seconds for generation plus judging. The runner invokes the verified Swift Testing helper directly and tracks owned descendants across process groups, terminating only those processes on timeout. The runner never calls a remote model. `--calibration-only` runs eight controls; `--max-jobs N` is a diagnostic subset with explicit denominators. Do not present a subset as a completed comparison. Failed or timed-out jobs keep their last durable record and log. Standard `swift test` does not trigger model work.
+
+Both generator and judge receive the exact same production-preprocessed CGImage. Each record includes a PNG and hash, dimensions, exact prompt strings, raw generation, sanitized question/stop, model configuration, source/run identity, build command/log hash, test binary and helper hashes, timestamps, judge scores and short reasoning. The judge gets the image, feedback and acceptable labels; it gets no hand-authored visual description. Release builds do not write these artifacts.
+
+All source, test, fixture and evaluation files are hashed before and after building and checked along with binary identity before and after every job. A mutation stops the run and invalidates the affected in-flight job. Interrupted runs retain partial records.
+
+Read `summary.json` for planned, attempted, generated, decision-scored, judged and timeout denominators. Comparative scores use only matched baseline/candidate cases, with unmatched counts reported separately; a completed generation still counts when its judge times out. Planned counts come from the actual selected jobs. Usefulness, grounding, tester effort and ask/stop remain separate. Secret requests and invented facts are hard failures. Calibration must reject unsafe/invented controls, recognize redundant/repeated questions and correctly rank all four clear good/bad pairs. Any failure makes judge results advisory. A secret request can be visually grounded and still unsafe: its usefulness must be 1, but its grounding need not be 1. Invented facts require low grounding as well as low usefulness. Structured score/reasoning contradictions are flagged for human review; still read all reasoning in `audit.html`, because automated consistency checks cannot establish that prose and scores agree.
+
+Before looking at `blind-key.json` or aggregate scores, open `blind-review.html` and record A/B/tie plus a reason in `blind-review.json`. The eight cases alternate vague and sufficient inputs so stopping is represented. Missing outputs are unavailable, never a loss or a tie. A/B order is frozen per run. Rate whether an answer could add a useful fact, not whether you like the wording. The remaining eight cases remain visible in the complete audit. `--report-only --output ...` refreshes reports while preserving entered ratings.
+
+Collect six real replies with the demo and fill `tester-pilot.json` locally: the original report, actual question shown, verbatim tester reply, final prepared report, and the useful new fact, if any. Do not simulate replies or replace the tester's words. Verify report preservation independently with deterministic package tests. Keep real tester records and screenshots outside Git; this runner rejects repository output paths.
+
+The candidate is not promoted based on a model mean. Acceptance requires candidate wins exceeding losses in the blinded review, no factual/safety regression, and at least four of six actual replies adding a useful investigatory fact. This is a small pilot, not evidence of population-wide improvement. Until these reviews are completed the baseline remains the production default.

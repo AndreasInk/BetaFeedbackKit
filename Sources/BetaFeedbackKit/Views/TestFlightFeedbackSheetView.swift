@@ -8,6 +8,12 @@
 import SwiftUI
 
 struct TestFlightFeedbackSheetView: View {
+    let screenshotSessionID: UUID?
+
+    init(screenshotSessionID: UUID? = nil) {
+        self.screenshotSessionID = screenshotSessionID
+    }
+
     @Environment(BetaContentViewModel.self) private var vm: BetaContentViewModel
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: FeedbackField?
@@ -151,7 +157,7 @@ private extension TestFlightFeedbackSheetView {
         focusedField = nil
         analysisTask = Task {
             do {
-                let result = try await vm.analyzeFeedback(input)
+                let result = try await vm.analyzeFeedback(input, screenshotSessionID: screenshotSessionID)
                 guard !Task.isCancelled else { return }
                 isAnalyzing = false
 
