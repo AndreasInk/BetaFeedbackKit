@@ -204,6 +204,15 @@ def make_reports(out, manifest, corpus):
     return summary
 
 
+def load_frozen_corpus(out, manifest):
+    """A later checkout must never relabel saved outputs or human ratings."""
+    data = (out/'corpus.json').read_bytes()
+    expected = manifest['sourceHashes'][str(CORPUS.relative_to(ROOT))]
+    if hashlib.sha256(data).hexdigest() != expected:
+        raise ValueError('Saved corpus does not match the evaluated source hash')
+    return json.loads(data)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True, help='New local directory outside Git')
@@ -217,12 +226,15 @@ def main():
     if out == ROOT or ROOT in out.parents:
         parser.error('Use an output directory outside the repository; artifacts contain feedback and pixels.')
     if args.timeout < 1: parser.error('Timeout must be positive')
-    corpus = json.loads(CORPUS.read_text())
     if args.report_only:
         manifest = json.loads((out/'manifest.json').read_text())
+        corpus = load_frozen_corpus(out, manifest)
     else:
         if out.exists() and any(out.iterdir()): parser.error('Use a fresh directory; previous evidence must not be overwritten')
         out.mkdir(parents=True, exist_ok=True)
+        corpus_data = CORPUS.read_bytes()
+        (out/'corpus.json').write_bytes(corpus_data)
+        corpus = json.loads(corpus_data)
         jobs = ['control:'+c for c in CONTROLS]
         if not args.calibration_only:
             jobs += [f"{p['id']}:{kind}:{variant}" for p in corpus['pairs'] for kind in ['vague','sufficient'] for variant in ['baseline','candidate']]
@@ -265,7 +277,7 @@ def main():
         save(out/'build.json',build)
         manifest.update(sourceHashes=after, build=build, status='built')
         save(out/'manifest.json',manifest)
-        if code != 0 or timed_out or before != after or test_binary is None:
+        if code != 0 or timed_out or before != after or test_binary is None or hashlib.sha256(corpus_data).hexdigest() != after[str(CORPUS.relative_to(ROOT))]:
             manifest['status']='build_invalid';save(out/'manifest.json',manifest)
             print(json.dumps(make_reports(out,manifest,corpus),indent=2));return
         def mutation_detected():

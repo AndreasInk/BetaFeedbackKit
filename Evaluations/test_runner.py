@@ -1,4 +1,5 @@
 """Harness regressions; these tests never run a model."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -6,7 +7,7 @@ import tempfile
 import time
 import unittest
 
-from run_image_evals import owned_process, assess_calibration, make_reports, comparison_summary, CONTROLS
+from run_image_evals import owned_process, assess_calibration, make_reports, comparison_summary, load_frozen_corpus, CORPUS, ROOT, CONTROLS
 
 
 class RunnerTests(unittest.TestCase):
@@ -65,6 +66,17 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(result['variants']['candidate']['planned'],2)
         manifest['invalidJobs'] = ['a:vague:candidate']
         self.assertEqual(comparison_summary(manifest,records)['matchedJudgePairs'],0)
+
+    def test_report_uses_saved_corpus_and_rejects_tampering(self):
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory)
+            data = b'{"pairs": [{"id": "original"}]}'
+            (out/'corpus.json').write_bytes(data)
+            manifest = {'sourceHashes': {str(CORPUS.relative_to(ROOT)): hashlib.sha256(data).hexdigest()}}
+            self.assertEqual(load_frozen_corpus(out, manifest)['pairs'][0]['id'], 'original')
+            (out/'corpus.json').write_text('{"pairs": []}')
+            with self.assertRaises(ValueError):
+                load_frozen_corpus(out, manifest)
 
     def test_missing_calibration_is_never_a_pass(self):
         result = assess_calibration([])
