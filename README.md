@@ -148,6 +148,8 @@ On older systems or without notification access, BetaFeedbackKit falls back to n
 
 ## Development
 
+Clarification asks for the single most useful missing detail for locating, reproducing, or understanding an issue. Sufficiently specific feedback can finish without another question; original answers remain unchanged.
+
 Run `swift test` for deterministic coverage. Xcode 27 also runs the Apple Evaluations test, which scores clarification quality across text, conversation-history, and bundled screenshot fixtures using the on-device model.
 
 ## License

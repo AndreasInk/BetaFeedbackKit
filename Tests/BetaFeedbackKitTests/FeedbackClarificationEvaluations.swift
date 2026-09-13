@@ -34,6 +34,10 @@ private func hasClarificationOutput(_ output: String) -> Bool {
     return !value.isEmpty && value != "<no question>" && value.count <= 240
 }
 
+private func matchesClarificationDecision(_ output: String, expectsClarification: Bool) -> Bool {
+    expectsClarification ? hasClarificationOutput(output) : output == "<no question>"
+}
+
 @available(iOS 27.0, macOS 27.0, *)
 private struct ClarificationQuestionEvaluation: Evaluation {
     struct Case: Sendable {
@@ -43,15 +47,10 @@ private struct ClarificationQuestionEvaluation: Evaluation {
         let screenshotName: String?
         let visualContext: String?
         let expectedBehavior: String
+        var expectsClarification: Bool = true
 
         var evaluationPrompt: String {
             var lines = ["User feedback: \(feedback)"]
-            if !developerContext.isEmpty {
-                let context = developerContext.sorted { $0.key < $1.key }
-                    .map { "\($0.key): \($0.value)" }
-                    .joined(separator: ", ")
-                lines.append("Known context: \(context)")
-            }
             if let visualContext {
                 lines.append("Visible screenshot context: \(visualContext)")
             }
@@ -123,7 +122,7 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask which visual area or layout change would improve the settings screen without inventing a specific defect."
+            expectedBehavior: "Ask which part of the interface is problematic or what change would help. Do not infer Settings from hidden developer context."
         ),
         Case(
             feedback: "Bad ui",
@@ -169,7 +168,8 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask one useful remaining question, such as whether error 42 appears immediately or after a delay. Do not repeat the action, result, frequency, or expected result already supplied."
+            expectedBehavior: "Return no question: the action, location, actual result, expected result, and frequency are already supplied.",
+            expectsClarification: false
         ),
         Case(
             feedback: "Continue didn't work.",
@@ -190,7 +190,7 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask when the slowness is noticeable or whether it affects Search more broadly. Do not assume a freeze, error, or particular control."
+            expectedBehavior: "Ask which action is slow or when the slowness is noticeable. Do not assume a freeze, error, or particular control."
         ),
         Case(
             feedback: "The new home screen is much easier to use.",
@@ -258,7 +258,8 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask one useful detail about the proposed grouping, such as whether all goal controls should move there. Do not ask the user to restate the requested destination."
+            expectedBehavior: "Return no question: the goal controls, requested destination, and reason are specified.",
+            expectsClarification: false
         ),
         Case(
             feedback: "Make the progress ring blue like the goal card instead of gray.",
@@ -266,7 +267,8 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask one useful detail about the desired blue treatment, such as whether it should match the goal card in every state. Do not ask the user to restate the requested color change."
+            expectedBehavior: "Return no question: the target, current color, and requested reference color are specified.",
+            expectsClarification: false
         ),
         Case(
             feedback: "Rename Automation & Reminders to Reminders; automation sounds too technical.",
@@ -274,7 +276,8 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask one useful detail about the rename, such as whether other automation wording also feels too technical. Do not ask the user to repeat the replacement label or reason."
+            expectedBehavior: "Return no question: the exact replacement label and reason are specified.",
+            expectsClarification: false
         ),
         Case(
             feedback: "Increase the contrast of the secondary labels on the dark card so I can read them.",
@@ -282,7 +285,8 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask one useful detail about readability, such as whether the issue occurs for every secondary label. Do not ask the user to restate the requested contrast change."
+            expectedBehavior: "Return no question: the affected labels, background, and requested readability improvement are specified.",
+            expectsClarification: false
         ),
         Case(
             feedback: "This section is hard to use.",
@@ -366,7 +370,7 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             clarificationTurns: [],
             screenshotName: nil,
             visualContext: nil,
-            expectedBehavior: "Ask which step milestone unlocked earlier or later than expected, or what milestone behavior the user expected. Use the supplied domain meaning; do not interpret timing as time of day, invent an app, or claim the unlock rule is wrong."
+            expectedBehavior: "Ask what unlock behavior the tester expected or what happened. Do not infer step milestones or time of day from developer context that is not sent to the model."
         ),
         Case(
             feedback: "These alerts are hard to read.",
@@ -404,7 +408,7 @@ private struct ClarificationQuestionEvaluation: Evaluation {
         }
     }
 
-    let clarificationPresence = Metric("ClarificationPresence")
+    let clarificationPresence = Metric("ClarificationDecisionAccuracy")
     let questionQuality = Metric("QuestionQuality")
 
     var dataset: ArrayLoader<ModelSample<String>> {
@@ -431,6 +435,7 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             let question = analysis.nextQuestion?.text ?? "<no question>"
             return ModelSubject(value: question)
         } catch {
+            print("[BetaFeedbackKitEvals][error] case=\(Self.cases.firstIndex(where: { $0.expectedBehavior == expected }) ?? -1) error=\(String(reflecting: error))")
             await FoundationModelEvaluationLock.shared.release()
             throw error
         }
@@ -459,19 +464,14 @@ private struct ClarificationQuestionEvaluation: Evaluation {
     var evaluators: Evaluators {
         Evaluator { input, subject in
             let question = subject.value
-            let hasClarification = hasClarificationOutput(question)
-            if !hasClarification {
-                let feedback = Self.cases.first {
-                    $0.expectedBehavior == input.expected
-                }?.feedback ?? "unknown"
-                print(
-                    "[BetaFeedbackKitEvals][failure] feedback=\(feedback) "
-                        + "expectedClarification=true output=\(question)"
-                )
+            guard let evaluationCase = Self.cases.first(where: { $0.expectedBehavior == input.expected }) else {
+                return clarificationPresence.failing()
             }
-            return hasClarification
-                ? clarificationPresence.passing()
-                : clarificationPresence.failing()
+            let correct = matchesClarificationDecision(question, expectsClarification: evaluationCase.expectsClarification)
+            if !correct {
+                print("[BetaFeedbackKitEvals][decision] feedback=\(evaluationCase.feedback) expectedClarification=\(evaluationCase.expectsClarification) output=\(question)")
+            }
+            return correct ? clarificationPresence.passing() : clarificationPresence.failing()
         }
         ModelJudgeEvaluator(
             "QuestionQuality",
@@ -484,12 +484,17 @@ private struct ClarificationQuestionEvaluation: Evaluation {
             judge: SystemLanguageModel.default,
             prompt: ModelJudgePrompt(
                 instructions: """
-                    Evaluate the quality of one follow-up question for everyday app feedback.
+                    Evaluate a clarification decision for everyday app feedback.
+                    A <no question> output is ideal when the expected behavior calls for stopping;
+                    it is poor when a useful missing detail requires a question.
+                    Judge only evidence supplied to the model; developer metadata is not supplied.
                     Judge whether it would obtain a useful missing detail, stays grounded in what
                     the tester and supplied context establish, avoids invented facts or causes,
                     and uses clear neutral language.
 
-                    Focus on whether the output makes one clear, low-effort follow-up request.
+                    For a question, assess whether the answer would help a developer locate, reproduce,
+                    or understand the issue, and whether a tester can answer easily from memory.
+                    Penalize repeated information, compound requests, invented assumptions, and secrets.
                     Punctuation is not a quality signal. Use the expected behavior as guidance,
                     not as required wording. Assign the score that best matches the rubric.
                     """,
@@ -525,19 +530,29 @@ private struct FeedbackClarificationEvaluationTests {
         #expect(!hasClarificationOutput("<no question>"))
     }
 
+    @Test("Decision scoring rewards stopping only for sufficient reports")
+    func decisionScoringContract() {
+        #expect(matchesClarificationDecision("<no question>", expectsClarification: false))
+        #expect(!matchesClarificationDecision("What happened?", expectsClarification: false))
+        #expect(!matchesClarificationDecision("<no question>", expectsClarification: true))
+        #expect(!matchesClarificationDecision("", expectsClarification: false))
+        #expect(!matchesClarificationDecision(String(repeating: "a", count: 241), expectsClarification: true))
+        #expect(matchesClarificationDecision("What happened?", expectsClarification: true))
+    }
+
     @Test("Clarification output has one useful, grounded question")
     func clarificationQuestionQuality() async throws {
         guard #available(iOS 27.0, macOS 27.0, *) else { return }
         let evaluation = ClarificationQuestionEvaluation()
         let result = try await evaluation.run(info: [
-            "dataset": "single-followup-quality-v9",
-            "prompt": "simple-feedback-quality-v9"
+            "dataset": "single-followup-quality-v10",
+            "prompt": "developer-actionability-v10"
         ])
         let presence = result.aggregateValue(.mean(of: evaluation.clarificationPresence))
         let quality = result.aggregateValue(.mean(of: evaluation.questionQuality))
         let minimumQuality = result.aggregateValue(.minimum(of: evaluation.questionQuality))
         print(
-            "[BetaFeedbackKitEvals] clarificationPresence=\(presence) "
+            "[BetaFeedbackKitEvals] decisionAccuracy=\(presence) "
                 + "questionQuality=\(quality) minimumQuestionQuality=\(minimumQuality)"
         )
 

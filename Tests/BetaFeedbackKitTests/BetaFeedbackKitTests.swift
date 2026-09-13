@@ -964,10 +964,6 @@ import Testing
     )
 }
 
-@Test func clarificationPromptUsesOneNeutralUserCenteredPolicy() {
-    #expect(FeedbackClarificationPrompt.instructions == "Ask one short follow-up grounded in the tester's words, without inventing details.")
-}
-
 @Test @MainActor func notificationReplyOnlyAcceptsThePendingResponseStyle() {
     let yesNo = BetaFeedbackConversationQuestion(text: "Did you see an error?", responseStyle: .yesNo)
     let text = BetaFeedbackConversationQuestion(text: "What happened?", responseStyle: .text)
