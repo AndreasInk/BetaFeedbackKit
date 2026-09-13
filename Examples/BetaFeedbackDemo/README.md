@@ -26,6 +26,10 @@ report appears in the demo and can be copied from the feedback flow.
 
 The default remains the minimal prompt pending the blinded old/new evaluation and six real
 reply pilot. The evaluation harness exercises the candidate through the same image pipeline.
+To collect candidate replies, add `--betafeedback-evaluate-candidate` to the Debug scheme's
+launch arguments (or `swift run BetaFeedbackDemo --betafeedback-evaluate-candidate` on Mac).
+The demo identifies the active variant onscreen and in the prepared report context. The flag is
+ignored in Release builds and is not persisted; launching normally returns to the baseline.
 
 On iPhone, choose **Start notification feedback** to request notification access and schedule the
 first reply notification. Taking a screenshot exercises the same `.onScreenshot` path. The demo

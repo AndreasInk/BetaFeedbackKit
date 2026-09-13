@@ -5,6 +5,15 @@ import UIKit
 import UserNotifications
 #endif
 
+private enum DemoPrompt {
+    static var name: String {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--betafeedback-evaluate-candidate") { return "candidate" }
+        #endif
+        return "baseline"
+    }
+}
+
 @main
 struct BetaFeedbackDemoApp: App {
 #if os(iOS)
@@ -23,6 +32,7 @@ struct BetaFeedbackDemoApp: App {
         allowsFeedbackPasteboardExport: true,
         feedbackContextProvider: {
             [
+                "demo_prompt_variant": DemoPrompt.name,
                 "feature": "settings_information_architecture",
                 "screen": "settings",
                 "screen_summary": "Settings and controls",
@@ -68,6 +78,9 @@ private struct DemoSettingsView: View {
                 }
 
                 Section("BetaFeedbackKit") {
+                    Text("Testing \(DemoPrompt.name) clarification prompt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Button("Give feedback about this screen") {
                         let url = URL(string: "betafeedbackdemo://\(BetaContentViewModel.DeepLink.feedbackHost)")!
                         _ = feedback.handleDeepLink(url)

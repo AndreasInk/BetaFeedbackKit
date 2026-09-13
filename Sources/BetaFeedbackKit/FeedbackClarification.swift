@@ -326,6 +326,13 @@ protocol FeedbackConversationAnalyzing: Sendable {
 enum FeedbackPromptVariant: String, CaseIterable, Sendable, Codable {
     case baseline
     case candidate
+
+    static var runtimeDefault: Self {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--betafeedback-evaluate-candidate") { return .candidate }
+        #endif
+        return .baseline
+    }
 }
 
 struct FeedbackModelEvaluationOutput: Sendable {
@@ -340,7 +347,7 @@ struct OnDeviceFeedbackAnalyzer: FeedbackAnalyzing, FeedbackConversationAnalyzin
     // Keep the shipped instruction baseline until the blinded pilot establishes benefit.
     let promptVariant: FeedbackPromptVariant
 
-    init(promptVariant: FeedbackPromptVariant = .baseline) {
+    init(promptVariant: FeedbackPromptVariant = .runtimeDefault) {
         self.promptVariant = promptVariant
     }
 
