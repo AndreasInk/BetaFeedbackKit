@@ -1,0 +1,165 @@
+{
+  "notice": "Historical labels are uncalibrated; excluded from image comparison. No visual description is evidence.",
+  "cases": [
+    {
+      "id": "legacy-0",
+      "feedback": "Continue didn't work.",
+      "historicalLabel": "Ask what happened after pressing \"Continue\" or what the user expected. Do not assume an outcome.",
+      "sourceExcerpt": "Case(\n            feedback: \"Continue didn't work.\",\n            developerContext: [\"screen\": \"Checkout\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask what happened after pressing \\\"Continue\\\" or what the user expected. Do not assume an outcome.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-1",
+      "feedback": "The wording feels robotic.",
+      "historicalLabel": "Ask what wording or tone would feel more natural. Do not ask where the text appears or request a screenshot.",
+      "sourceExcerpt": "Case(\n            feedback: \"The wording feels robotic.\",\n            developerContext: [:],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask what wording or tone would feel more natural. Do not ask where the text appears or request a screenshot.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-2",
+      "feedback": "This looks off.",
+      "historicalLabel": "Ask what looks off or what the user expected to see without inventing a specific visual defect or interface element.",
+      "sourceExcerpt": "Case(\n            feedback: \"This looks off.\",\n            developerContext: [\"screen\": \"Profile\", \"area\": \"Avatar editor\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask what looks off or what the user expected to see without inventing a specific visual defect or interface element.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-3",
+      "feedback": "The new card isn't as glassy as it was.",
+      "historicalLabel": "Ask one useful remaining question, such as where the flatter appearance is most noticeable. Do not repeat the answered request for Liquid Glass or ask for another description of the desired style.",
+      "sourceExcerpt": "Case(\n            feedback: \"The new card isn't as glassy as it was.\",\n            developerContext: [\"screen\": \"Home\", \"feature\": \"home_experiment\"],\n            clarificationTurns: [\n                BetaFeedbackClarificationTurn(\n                    question: \"How would you describe the exact look you noticed\u2014or any changes you'd like to see?\",\n                    response: \"The card is more flat, it should use Liquid Glass so it reflects the blue above it.\"\n                )\n            ],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask one useful remaining question, such as where the flatter appearance is most noticeable. Do not repeat the answered request for Liquid Glass or ask for another description of the desired style.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-4",
+      "feedback": "Bad ui",
+      "historicalLabel": "Ask which part of the interface is problematic or what change would help. Do not infer Settings from hidden developer context.",
+      "sourceExcerpt": "Case(\n            feedback: \"Bad ui\",\n            developerContext: [\n                \"feature\": \"settings_information_architecture\",\n                \"screen\": \"settings\",\n                \"screen_summary\": \"Settings and controls\"\n            ],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask which part of the interface is problematic or what change would help. Do not infer Settings from hidden developer context.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-5",
+      "feedback": "Bad ui",
+      "historicalLabel": "Ask where the additional padding should apply. Do not ask again what visual element or layout change the user wants.",
+      "sourceExcerpt": "Case(\n            feedback: \"Bad ui\",\n            developerContext: [\n                \"feature\": \"settings_information_architecture\",\n                \"screen\": \"settings\",\n                \"screen_summary\": \"Settings and controls\"\n            ],\n            clarificationTurns: [\n                BetaFeedbackClarificationTurn(\n                    question: \"What specific visual element or layout change would make the interface clearer to you?\",\n                    response: \"More padding\"\n                )\n            ],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask where the additional padding should apply. Do not ask again what visual element or layout change the user wants.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-6",
+      "feedback": "Bad ui",
+      "historicalLabel": "Ask one useful remaining question without repeating the already supplied padding request or its full-view scope.",
+      "sourceExcerpt": "Case(\n            feedback: \"Bad ui\",\n            developerContext: [\n                \"feature\": \"settings_information_architecture\",\n                \"screen\": \"settings\",\n                \"screen_summary\": \"Settings and controls\"\n            ],\n            clarificationTurns: [\n                BetaFeedbackClarificationTurn(\n                    question: \"What specific visual element or layout change would make the interface clearer to you?\",\n                    response: \"More padding\"\n                ),\n                BetaFeedbackClarificationTurn(\n                    question: \"Where should the extra padding be applied?\",\n                    response: \"Full view\"\n                )\n            ],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask one useful remaining question without repeating the already supplied padding request or its full-view scope.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-7",
+      "feedback": "After I tapped Continue on checkout, the app showed error 42 every time instead of opening confirmation.",
+      "historicalLabel": "Return no question: the action, location, actual result, expected result, and frequency are already supplied.",
+      "sourceExcerpt": "Case(\n            feedback: \"After I tapped Continue on checkout, the app showed error 42 every time instead of opening confirmation.\",\n            developerContext: [\"screen\": \"Checkout\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Return no question: the action, location, actual result, expected result, and frequency are already supplied.\",\n            expectsClarification: false\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-8",
+      "feedback": "Continue didn't work.",
+      "historicalLabel": "Ask one useful next question based on the new answer, such as what the user expected. Do not repeat the previous question.",
+      "sourceExcerpt": "Case(\n            feedback: \"Continue didn't work.\",\n            developerContext: [\"screen\": \"Checkout\"],\n            clarificationTurns: [\n                BetaFeedbackClarificationTurn(\n                    question: \"What happened when you tapped Continue?\",\n                    response: \"The button dimmed but I stayed on checkout.\"\n                )\n            ],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask one useful next question based on the new answer, such as what the user expected. Do not repeat the previous question.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-9",
+      "feedback": "Everything feels slow.",
+      "historicalLabel": "Ask which action is slow or when the slowness is noticeable. Do not assume a freeze, error, or particular control.",
+      "sourceExcerpt": "Case(\n            feedback: \"Everything feels slow.\",\n            developerContext: [\"screen\": \"Search\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask which action is slow or when the slowness is noticeable. Do not assume a freeze, error, or particular control.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-10",
+      "feedback": "The new home screen is much easier to use.",
+      "historicalLabel": "Ask what specifically made the home screen easier to use so the positive feedback becomes more actionable.",
+      "sourceExcerpt": "Case(\n            feedback: \"The new home screen is much easier to use.\",\n            developerContext: [\"screen\": \"Home\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask what specifically made the home screen easier to use so the positive feedback becomes more actionable.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-14",
+      "feedback": "Other settings screens would have a sub section here rather than all the elements on one screen",
+      "historicalLabel": "Ask which settings should be grouped together or what subsection the user expected. Do not ask about wording, tone, or copy.",
+      "sourceExcerpt": "Case(\n            feedback: \"Other settings screens would have a sub section here rather than all the elements on one screen\",\n            developerContext: [\n                \"app\": \"WalkLock\",\n                \"screen\": \"Settings\",\n                \"screen_summary\": \"settings and controls\"\n            ],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask which settings should be grouped together or what subsection the user expected. Do not ask about wording, tone, or copy.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-15",
+      "feedback": "This settings page is confusing rather than simple.",
+      "historicalLabel": "Ask which part of the settings page feels confusing because this comparison does not propose a concrete structural change.",
+      "sourceExcerpt": "Case(\n            feedback: \"This settings page is confusing rather than simple.\",\n            developerContext: [\"app\": \"WalkLock\", \"screen\": \"Settings\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask which part of the settings page feels confusing because this comparison does not propose a concrete structural change.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-16",
+      "feedback": "Don't move the buttons; the page is confusing.",
+      "historicalLabel": "Ask what else about the page is confusing. Respect the instruction not to move the buttons.",
+      "sourceExcerpt": "Case(\n            feedback: \"Don't move the buttons; the page is confusing.\",\n            developerContext: [\"app\": \"WalkLock\", \"screen\": \"Settings\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask what else about the page is confusing. Respect the instruction not to move the buttons.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-17",
+      "feedback": "Move goal controls into Goals & Locks so I can find them from Settings.",
+      "historicalLabel": "Return no question: the goal controls, requested destination, and reason are specified.",
+      "sourceExcerpt": "Case(\n            feedback: \"Move goal controls into Goals & Locks so I can find them from Settings.\",\n            developerContext: [\"app\": \"WalkLock\", \"screen\": \"Settings\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Return no question: the goal controls, requested destination, and reason are specified.\",\n            expectsClarification: false\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-18",
+      "feedback": "Make the progress ring blue like the goal card instead of gray.",
+      "historicalLabel": "Return no question: the target, current color, and requested reference color are specified.",
+      "sourceExcerpt": "Case(\n            feedback: \"Make the progress ring blue like the goal card instead of gray.\",\n            developerContext: [\"app\": \"WalkLock\", \"screen\": \"Home\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Return no question: the target, current color, and requested reference color are specified.\",\n            expectsClarification: false\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-19",
+      "feedback": "Rename Automation & Reminders to Reminders; automation sounds too technical.",
+      "historicalLabel": "Return no question: the exact replacement label and reason are specified.",
+      "sourceExcerpt": "Case(\n            feedback: \"Rename Automation & Reminders to Reminders; automation sounds too technical.\",\n            developerContext: [\"app\": \"WalkLock\", \"screen\": \"Settings\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Return no question: the exact replacement label and reason are specified.\",\n            expectsClarification: false\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-20",
+      "feedback": "Increase the contrast of the secondary labels on the dark card so I can read them.",
+      "historicalLabel": "Return no question: the affected labels, background, and requested readability improvement are specified.",
+      "sourceExcerpt": "Case(\n            feedback: \"Increase the contrast of the secondary labels on the dark card so I can read them.\",\n            developerContext: [\"app\": \"Agent Alerts\", \"screen\": \"Notification Center\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Return no question: the affected labels, background, and requested readability improvement are specified.\",\n            expectsClarification: false\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-21",
+      "feedback": "This section is hard to use.",
+      "historicalLabel": "Ask what part of the section feels hard to use without inventing a control or interaction.",
+      "sourceExcerpt": "Case(\n            feedback: \"This section is hard to use.\",\n            developerContext: [\"app\": \"WalkLock\", \"screen\": \"Settings\"],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask what part of the section feels hard to use without inventing a control or interaction.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    },
+    {
+      "id": "legacy-30",
+      "feedback": "The unlock timing feels wrong.",
+      "historicalLabel": "Ask what unlock behavior the tester expected or what happened. Do not infer step milestones or time of day from developer context that is not sent to the model.",
+      "sourceExcerpt": "Case(\n            feedback: \"The unlock timing feels wrong.\",\n            developerContext: [\n                \"app\": \"WalkLock\",\n                \"screen\": \"Home\",\n                \"domain_context\": \"WalkLock unlocks selected apps when the user reaches configured daily step milestones; this feedback is about milestone-based unlocking, not clock time.\"\n            ],\n            clarificationTurns: [],\n            screenshotName: nil,\n            visualContext: nil,\n            expectedBehavior: \"Ask what unlock behavior the tester expected or what happened. Do not infer step milestones or time of day from developer context that is not sent to the model.\"\n        ),",
+      "status": "not_run_legacy_text_only",
+      "eligibleForImageComparison": false
+    }
+  ]
+}

@@ -174,10 +174,14 @@ public struct BetaContentView<Content: View>: View {
                 .opacity(viewModel.showScreenshotOverlay ? 1 : 0)
 #endif
             }
+            .background { FeedbackWindowRegistration(capture: viewModel.feedbackWindowCapture) }
             .sheet(item: presentedSheetBinding) { sheet in
                 switch sheet {
                 case .testFlightFeedbackPrompt:
-                    TestFlightFeedbackSheetView()
+                    let captureID = viewModel.activeSheetCaptureID
+                    TestFlightFeedbackSheetView(screenshotSessionID: captureID)
+                        .id(captureID)
+                        .onDisappear { viewModel.releaseSheetScreenshot(ifCurrent: captureID) }
                         .environment(viewModel)
                         .presentationDetents([.medium])
                 case .testFlightScreenshotTip:

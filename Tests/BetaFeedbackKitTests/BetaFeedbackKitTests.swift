@@ -358,6 +358,10 @@ import Testing
     )
     let vm = BetaContentViewModel(feedbackClarificationMode: .onDevice)
     vm.feedbackAnalyzer = StubFeedbackAnalyzer(result: expected)
+    vm.activeSheetScreenshot = try #require(CGContext(
+        data: nil, width: 2, height: 2, bitsPerComponent: 8, bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    )?.makeImage())
     let input = FeedbackAnalysisInput(
         originalFeedback: "The continue button didn't work.",
         questionID: "checkout",
@@ -964,10 +968,6 @@ import Testing
     )
 }
 
-@Test func clarificationPromptUsesOneNeutralUserCenteredPolicy() {
-    #expect(FeedbackClarificationPrompt.instructions == "Ask one short follow-up grounded in the tester's words, without inventing details.")
-}
-
 @Test @MainActor func notificationReplyOnlyAcceptsThePendingResponseStyle() {
     let yesNo = BetaFeedbackConversationQuestion(text: "Did you see an error?", responseStyle: .yesNo)
     let text = BetaFeedbackConversationQuestion(text: "What happened?", responseStyle: .text)
@@ -1145,13 +1145,13 @@ private actor CaptureActor {
 private struct StubFeedbackAnalyzer: FeedbackAnalyzing {
     let result: BetaFeedbackClarificationAnalysis?
 
-    func analyze(_ input: FeedbackAnalysisInput) async throws -> BetaFeedbackClarificationAnalysis? {
+    func analyze(_ input: FeedbackAnalysisInput, screenshot: CGImage?) async throws -> BetaFeedbackClarificationAnalysis? {
         result
     }
 }
 
 private struct FailingIfInvokedAnalyzer: FeedbackAnalyzing {
-    func analyze(_ input: FeedbackAnalysisInput) async throws -> BetaFeedbackClarificationAnalysis? {
+    func analyze(_ input: FeedbackAnalysisInput, screenshot: CGImage?) async throws -> BetaFeedbackClarificationAnalysis? {
         Issue.record("Disabled clarification invoked its analyzer")
         return nil
     }

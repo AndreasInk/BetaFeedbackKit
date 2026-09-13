@@ -5,6 +5,15 @@ import UIKit
 import UserNotifications
 #endif
 
+private enum DemoPrompt {
+    static var name: String {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--betafeedback-evaluate-candidate") { return "candidate" }
+        #endif
+        return "baseline"
+    }
+}
+
 @main
 struct BetaFeedbackDemoApp: App {
 #if os(iOS)
@@ -23,6 +32,7 @@ struct BetaFeedbackDemoApp: App {
         allowsFeedbackPasteboardExport: true,
         feedbackContextProvider: {
             [
+                "demo_prompt_variant": DemoPrompt.name,
                 "feature": "settings_information_architecture",
                 "screen": "settings",
                 "screen_summary": "Settings and controls",
@@ -30,12 +40,7 @@ struct BetaFeedbackDemoApp: App {
             ]
         },
         feedbackClarificationMode: .onDevice,
-        feedbackNotificationMode: .onScreenshot,
-        onFeedbackPrepared: { report in
-            #if DEBUG
-            print("[BetaFeedbackDemo] Prepared report:\n\(report.formattedText)")
-            #endif
-        }
+        feedbackNotificationMode: .onScreenshot
     )
 
     var body: some Scene {
@@ -64,7 +69,18 @@ private struct DemoSettingsView: View {
                     Toggle("Show goal details", isOn: .constant(true))
                 }
 
+                if let report = feedback.latestFeedbackReport {
+                    Section("Prepared feedback") {
+                        Text(report.formattedText)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                    }
+                }
+
                 Section("BetaFeedbackKit") {
+                    Text("Testing \(DemoPrompt.name) clarification prompt")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Button("Give feedback about this screen") {
                         let url = URL(string: "betafeedbackdemo://\(BetaContentViewModel.DeepLink.feedbackHost)")!
                         _ = feedback.handleDeepLink(url)
